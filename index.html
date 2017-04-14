@@ -1,317 +1,278 @@
+<!doctype html>
 <html>
 <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8">
-    <title>World Series Odds</title>
-    <meta name="viewport" content="width=device-width">
-    <style type="text/css">
-        .game_played {
-            clear: both;
-            width: 325px;
-            text-align: center;
-            padding: 0.5em 0;
-        }
-        .prob_bar {
-            background-color: gray;
-            height: 2em;
-            clear: both;
-        }
-        div.team1
-        {
-            background-color: darkorange;
-            color: black;
-            float: left;
-            height: 1em;
-            padding: 0.5em 0;
-        }
-        span.team1::before {
-            content: "Giants";
-        }
-        span.team1 {
-            display: block;
-            float: right;
-            width: 50%;
-            padding: 0 0 0.5em 0;
-        }
-        span.team2 {
-            display: block;
-            float: left;
-            width: 50%;
-            padding: 0 0 0.5em 0;
-        }
-        div.team2
-        {
-            background-color: blue;
-            color: white;
-            float: right;
-            height: 1em;
-            padding: 0.5em 0;
-        }
-        span.team2::before {
-            content: "Rangers";
-        }
-        .game {
-            float: left;
-            width: 325px;
-            text-align: center;
-            border: 1px solid grey;
-            clear: both;
-        }
-        .game_label {
-            font-weight: bold;
-            padding: 0.5em 0;
-        }
-        .side {
-            float: left;
-        }
-        .game span {
-            white-space: nowrap;
-        }
-        br {
-            clear: both;
-        }
-    </style>
-    <script type="text/javascript">
-        team1_probs = [1, 1, 0, 0.50, 0.50, 0.50, 0.50];
-        team2_probs = [];
-        team1_won_yet = [];
-        team2_won_yet = [];
+<meta http-equiv="content-type" content="text/html; charset=utf-8">
+<title>Series Odds Calculator</title>
+<style type="text/css">
+    fieldset { display: inline-block; }
+    legend { text-align: center; }
 
-        function seriesProb (game, wins, max_games, prob) {
-            if (wins >= 4) {
-                return 1;
-            }
-            else if (game - wins >= 4) {
-                return 0
-            }
-            else if (game > max_games) {
-                return 0;
-            }
-            else {
-                return(seriesProb(game+1, wins, max_games, prob) * (1-prob[game])
-                     + seriesProb(game+1, wins+1, max_games, prob) * (prob[game]));
-            }
-        }
+    .hamburger-menu { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
+    #show-config { display: none; }
+    #show-config:checked + .config-screen { display: block; }
+    .config-screen { display: none; }
+    .config-screen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+    .config-form { position: fixed; left: 2.5em; text-align: right; display: inline-block; pointer-events: initial; }
 
-        function updateValue (caller) {
-            var value = caller.className == 'number2' ? 100 - caller.value : caller.value;
-            if (value > 100) {
-                value = 100;
-            }
-            else if (value < 0) {
-                value = 0;
-            }
-            var game = caller.parentNode.parentNode;
-            var game_idx = game.getAttribute('game_idx');
-            team1_probs[game_idx] = value / 100;
-            team2_probs[game_idx] = (100 - value) / 100;
-            var inputs = game.getElementsByTagName('input');
-            for (var i = 0; i < inputs.length; i++) {
-                if (inputs[i].className == 'number2') {
-                    inputs[i].value = 100 - value;
+    #boxes { width: 400px; margin: auto; text-align: center; }
+    .game fieldset { width: 100%; }
+    .meter-outer { background: blue; position: relative; }
+    .meter-inner { background: darkorange; padding: 0.5em 0; }
+    .team1-meter { padding: 0 0.5em; color: black; background: darkorange; text-align: center; }
+    .team2-meter { position: absolute; right: 0; padding: 0.5em; color: white; background: blue; text-align: center; }
+    .range { width: 250px; }
+</style>
+
+</head>
+<body>
+
+<label class="hamburger-menu" for="show-config">☰</label>
+<input type="checkbox" id="show-config">
+<div class="config-screen">
+    <label for="show-config" class="config-screen-overlay"></label>
+    <form class="config-form" id="set_globals">
+        <fieldset>
+            <legend>Configuration</legend>
+            <label>Team 1: <input name="team1_name" value="Rangers" /></label><br>
+            <label>Color: <input name="team1_fg" value="black" /></label><br>
+            <label>Background: <input name="team1_bg" value="darkorange" /></label><br>
+            <br>
+            <label>Team 2: <input name="team2_name" value="Giants" /></label><br>
+            <label>Color: <input name="team2_fg" value="white" /></label><br>
+            <label>Background: <input name="team2_bg" value="blue" /></label><br>
+            <br>
+            <button type="button" onclick="$('#show-config').click()">Cancel</button>
+            <button type="submit">Set</button>
+        </fieldset>
+    </form>
+</div>
+
+<script type="text/html" id="play-chance-template">
+    <p class="play_chance" name="play_chance">
+        Chance that Game <span name="game_no"></span> gets played:
+        <span name="play_pct">70</span>%
+    </p>
+</script>
+
+<script type="text/html" id="game-template">
+    <div class="game">
+        <fieldset>
+            <legend class="game_label">Game <span name="game_no"></span></legend>
+            <span>
+                <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)">
+            </span>
+            <br>
+        </div>
+    </fieldset>
+</script>
+
+<script type="text/html" id="final-win-template">
+    <div class="final-win">
+        <div class="meter-outer">
+            <div class="team2-meter"><span name="team2_name"></span><br>&nbsp;<span name="team2_pct">15</span>%</div>
+            <div class="meter-inner" name="meter_inner" style="width:15%">
+                <div class="team1-meter"><span name="team1_name"></span><br>&nbsp;<span name="team1_pct">15</span>%</div>
+            </div>
+        </div>
+    </div>
+</script>
+
+<div id="boxes"></div>
+
+<script>
+var $ = document.querySelector.bind(document);
+var $$ = document.querySelectorAll.bind(document);
+
+function parent(el, selector) {
+    do {
+        el = el.parentElement;
+        if (el.matches(selector)) {
+            return el;
+        }
+    } while (el != null);
+    return null;
+}
+
+function getValues(form) {
+    var values = {};
+    var fields = form.querySelectorAll('[name]');
+    for (var i = 0; i < fields.length; i++) {
+        var field = fields[i];
+        var value = field.value;
+        if (field.type == 'checkbox') {
+            value = field.checked;
+        }
+        values[field.name] = value;
+    }
+    return values
+}
+
+/*
+when creating or modifying an element, we want to change
+- content (text or value)
+- classes
+- dynamic styles
+function setValues(el, values) {}
+values = {name: value}
+data = {
+    team1_name: "giants"
+    team1_colors.style.color: "white",
+    team1_colors.style.background: "blue"
+    team1_colors.style: {color: white, background: blue}
+}
+keys in data split into parts
+[name, attr, value]
+*/
+function setValue(el, value) {
+    if (el.tagName == 'input') {
+        if (el.type == 'checkbox') {
+            el.checked = !!value;
+        }
+        else {
+            el.value = value;
+        }
+    }
+    else {
+        el.textContent = value;
+        if ('textContent' in el) {
+            el.textContent = value;
+        }
+        else {
+            el.innerText = value; // IE8 support
+        }
+    }
+}
+
+function setValues(el, key, value) {
+    var parts = key.split('.');
+    var name = parts[0];
+    var attr = parts[1] || 'value';
+
+    var items = el.querySelectorAll('[name="'+name+'"]');
+    for (var i = 0; i < items.length; i++) {
+        var el = items[i];
+        if (attr == 'value') {
+            if (el.tagName == 'input') {
+                if (el.type == 'checkbox') {
+                    el.checked = !!value;
                 }
                 else {
-                    inputs[i].value = value;
+                    el.value = value;
                 }
             }
-            
+            else {
+                el.textContent = value;
+                if ('textContent' in el) {
+                    el.textContent = value;
+                }
+                else {
+                    el.innerText = value; // IE8 support
+                }
+            }
+        }
+        else if (attr == 'style' && parts[2]) {
+            // e.g. team1_colors.style.background = blue
+            el.style[parts[2]] = value;
+        }
+        else {
+            el[attr] = value;
+        }
+    }
+}
+
+function setMultiValues(el, context) {
+    Object.keys(context).forEach(function(key){
+        setValues(el, key, context[key]);
+    });
+}
+
+function render(template, globals, locals) {
+    template = template || '';
+    var context = Object.assign({}, globals);
+    context = Object.assign(context, locals);
+
+    var container = document.createElement('div');
+    var html = template.innerHTML || template;
+    container.innerHTML = html.trim();
+    var el = container.firstChild;
+
+    setMultiValues(el, context);
+
+    return el;
+}
+
+var globals = {
+    team1_name: "Rangers",
+    team1_fg: "black",
+    team1_bg: "darkorange",
+    team2_name: "Giants",
+    team2_fg: "white",
+    team2_bg: "blue"
+};
+$("#set_globals").onsubmit = function(event) {
+    globals = getValues(event.target);
+    renderBoxes();
+    $("#show-config").click();
+    return false;
+}
+
+function renderBoxes() {
+    var boxes = $("#boxes");
+    boxes.innerHTML = '';
+    for (var i = 1; i <= 7; i++) {
+        var locals = { game_no: i }
+        if (i >= 5) {
+            var play = render($('#play-chance-template'), globals, locals);
+            boxes.append(play);
+        }
+        var game = render($('#game-template'), globals, locals);
+        boxes.append(game);
+        if (i >= 4) {
+            var win = render($('#final-win-template'), globals, locals);
+            boxes.append(win);
+        }
+    }
+}
+
+function updateMeters(input) {
+    var game = parent(input, "#boxes");
+    setMultiValues(game, {
+        team1_pct: input.value,
+        team2_pct: 100-input.value,
+        "meter_inner.style.width": input.value + "%"
+    });
+}
+
+function updateBoxes() {
+    setMultiValues($("#boxes", {
+
+    }));
+}
+
+team1_probs = [1, 1, 0, 0.50, 0.50, 0.50, 0.50];
+team2_probs = [];
+team1_won_yet = [];
+team2_won_yet = [];
             for (var max_games = 0; max_games < 7; max_games++) {
                 team1_won_yet[max_games] = seriesProb(0, 0, max_games, team1_probs);
                 team2_won_yet[max_games] = seriesProb(0, 0, max_games, team2_probs);
             }
-            
-            var results = document.getElementsByClassName('result');
-            for (var i = 0; i < results.length; i++) {
-                var max_games = results[i].getAttribute('game_idx');
-                if (results[i].getAttribute('team') == '2') {
-                    results[i].innerHTML = percent(team2_won_yet[max_games], true);
-                } else {
-                    results[i].innerHTML = percent(team1_won_yet[max_games], true);
-                }
-            }
-            
-            document.getElementById('game4_bar1').style.width= "" + percent(team1_won_yet[3]);
-            document.getElementById('game4_bar2').style.width= "" + percent(team2_won_yet[3]);
-            document.getElementById('game5_bar1').style.width= "" + percent(team1_won_yet[4]);
-            document.getElementById('game5_bar2').style.width= "" + percent(team2_won_yet[4]);
-            document.getElementById('game6_bar1').style.width= "" + percent(team1_won_yet[5]);
-            document.getElementById('game6_bar2').style.width= "" + percent(team2_won_yet[5]);
-            document.getElementById('game7_bar1').style.width= "" + percent(team1_won_yet[6]);
-            document.getElementById('game7_bar2').style.width= "" + percent(team2_won_yet[6]);
-            
-            document.getElementById('game5_played').innerHTML = percent(1 - team1_won_yet[3] - team2_won_yet[3], true);
-            document.getElementById('game6_played').innerHTML = percent(1 - team1_won_yet[4] - team2_won_yet[4], true);
-            document.getElementById('game7_played').innerHTML = percent(1 - team1_won_yet[5] - team2_won_yet[5], true);
-        }
-        
-        function percent (p, trunc) {
-            if (trunc) {
-                return Math.round(p * 10000) / 100 + "%";
-            }
-            else {
-                return p * 100 + "%";
-            }
-        }
-    </script>
-</head>
-<body>
-
-<div class="game" game_idx="0" id="game1">
-    <div class="game_label">Game 1</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-</div>
-
-<div class="game" game_idx="1" id="game2">
-    <div class="game_label">Game 2</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-</div>
-
-<div class="game" game_idx="2" id="game3">
-    <div class="game_label">Game 3</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-</div>
-
-<div class="game" game_idx="3" id="game4">
-    <div class="game_label">Game 4</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <br>
-    <div id="game4_bkg" class="prob_bar">
-        <div id="game4_bar1" class="team1" style="width: 12.5%;"><span class="result" team="1" game_idx="3">12.5%</span></div>
-        <div id="game4_bar2" class="team2" style="width: 0%;"><span class="result" team="2" game_idx="3">0%</span></div>
-    </div>
-</div>
-
-<div class="game_played">
-Probability that Game 5 gets played: <span id="game5_played">87.5%</span>
-</div>
-
-<div class="game" game_idx="4" id="game5">
-    <div class="game_label">Game 5</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <br>
-    <div id="game5_bkg" class="prob_bar">
-        <div id="game5_bar1" class="team1" style="width: 31.25%;"><span class="result" team="1" game_idx="4">31.25%</span></div>
-        <div id="game5_bar2" class="team2" style="width: 6.25%;"><span class="result" team="2" game_idx="4">6.25%</span></div>
-    </div>
-</div>
-
-<div class="game_played">
-Probability that Game 6 gets played: <span id="game6_played">62.5%</span>
-</div>
-
-<div class="game" game_idx="5" id="game6">
-    <div class="game_label">Game 6</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <br>
-    <div id="game6_bkg" class="prob_bar">
-        <div id="game6_bar1" class="team1" style="width: 50%;"><span class="result" team="1" game_idx="5">50%</span></div>
-        <div id="game6_bar2" class="team2" style="width: 18.75%;"><span class="result" team="2" game_idx="5">18.75%</span></div>
-    </div>
-</div>
-
-<div class="game_played">
-Probability that Game 7 gets played: <span id="game7_played">31.25%</span>
-</div>
-
-<div class="game" game_idx="6" id="game7">
-    <div class="game_label">Game 7</div>
-    <span>
-        <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateValue(this)">
-    </span>
-    <br>
-    <span class="team2">
-        <br>
-        <input class="number2" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <span class="team1">
-        <br>
-        <input class="number1" type="number" size="5" min="0" max="100" pattern="\d*" onchange="updateValue(this)" oninput="updateValue(this)">
-    </span>
-    <br>
-    <div id="game7_bkg" class="prob_bar">
-        <div id="game7_bar1" class="team1" style="width: 65.625%;"><span class="result" team="1" game_idx="6">65.63%</span></div>
-        <div id="game7_bar2" class="team2" style="width: 34.375%;"><span class="result" team="2" game_idx="6">34.38%</span></div>
-    </div>
-</div>
-
-<br style="clear:both;">
-
-<script type="text/javascript">
-(function () {
-    var ranges = document.getElementsByClassName('range');
-    for (var i = 0; i < ranges.length; i++) {
-            ranges[i].value = team1_probs[i] * 100;
-            updateValue(ranges[i]);
+function seriesProb (game, wins, max_games, prob) {
+    if (wins >= 4) {
+        return 1;
     }
-})();
+    else if (game - wins >= 4) {
+        return 0
+    }
+    else if (game > max_games) {
+        return 0;
+    }
+    else {
+        return(seriesProb(game+1, wins, max_games, prob) * (1-prob[game])
+             + seriesProb(game+1, wins+1, max_games, prob) * (prob[game]));
+    }
+}
+
+renderBoxes();
+
 </script>
-
-
-
-
-</body></html>
