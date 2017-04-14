@@ -4,6 +4,7 @@
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
 <title>Series Odds Calculator</title>
 <style type="text/css">
+    * { box-sizing: border-box; }
     fieldset { display: inline-block; }
     legend { text-align: center; }
 
@@ -16,10 +17,9 @@
 
     #boxes { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
-    .meter-outer { background: blue; position: relative; }
-    .meter-inner { background: darkorange; padding: 0.5em 0; }
-    .team1-meter { padding: 0 0.5em; color: black; background: darkorange; text-align: center; }
-    .team2-meter { position: absolute; right: 0; padding: 0.5em; color: white; background: blue; text-align: center; }
+    .meter-outer { background: gray; position: relative; height: 3em; text-align: left; }
+    .team1-meter { display: inline-block; padding: 0.5em; }
+    .team2-meter { position: absolute; right: 0; padding: 0.5em; text-align: right; }
     .range { width: 250px; }
 </style>
 
@@ -34,15 +34,15 @@
         <fieldset>
             <legend>Configuration</legend>
             <label>Team 1: <input name="team1_name" value="Rangers" /></label><br>
-            <label>Color: <input name="team1_fg" value="black" /></label><br>
-            <label>Background: <input name="team1_bg" value="darkorange" /></label><br>
+            <label>Color: <input name="team1.style.color" value="black" /></label><br>
+            <label>Background: <input name="team1.style.background" value="darkorange" /></label><br>
             <br>
             <label>Team 2: <input name="team2_name" value="Giants" /></label><br>
-            <label>Color: <input name="team2_fg" value="white" /></label><br>
-            <label>Background: <input name="team2_bg" value="blue" /></label><br>
+            <label>Color: <input name="team2.style.color" value="white" /></label><br>
+            <label>Background: <input name="team2.style.background" value="blue" /></label><br>
             <br>
             <button type="button" onclick="$('#show-config').click()">Cancel</button>
-            <button type="submit">Set</button>
+            <button type="submit">Save</button>
         </fieldset>
     </form>
 </div>
@@ -69,10 +69,8 @@
 <script type="text/html" id="final-win-template">
     <div class="final-win">
         <div class="meter-outer">
-            <div class="team2-meter"><span name="team2_name"></span><br>&nbsp;<span name="team2_pct">15</span>%</div>
-            <div class="meter-inner" name="meter_inner" style="width:15%">
-                <div class="team1-meter"><span name="team1_name"></span><br>&nbsp;<span name="team1_pct">15</span>%</div>
-            </div>
+            <div class="team2-meter" name="team2"><span name="team2_name"></span><br>&nbsp;<span name="team2_pct">15</span>%</div>
+            <div class="team1-meter" name="team1"><span name="team1_name"></span><br>&nbsp;<span name="team1_pct">15</span>%</div>
         </div>
     </div>
 </script>
@@ -93,6 +91,19 @@ function parent(el, selector) {
     return null;
 }
 
+function parseQuery(query) {
+    query = query.replace(/^\?|\/$/g,'');
+    var items = query.split('&');
+    var obj = {};
+    items.forEach(function(item){
+        var parts = item.split('=');
+        var key = decodeURIComponent(parts[0]);
+        var value = decodeURIComponent(parts[1]);
+        obj[key] = value;
+    });
+    return obj;
+}
+
 function getValues(form) {
     var values = {};
     var fields = form.querySelectorAll('[name]');
@@ -107,42 +118,6 @@ function getValues(form) {
     return values
 }
 
-/*
-when creating or modifying an element, we want to change
-- content (text or value)
-- classes
-- dynamic styles
-function setValues(el, values) {}
-values = {name: value}
-data = {
-    team1_name: "giants"
-    team1_colors.style.color: "white",
-    team1_colors.style.background: "blue"
-    team1_colors.style: {color: white, background: blue}
-}
-keys in data split into parts
-[name, attr, value]
-*/
-function setValue(el, value) {
-    if (el.tagName == 'input') {
-        if (el.type == 'checkbox') {
-            el.checked = !!value;
-        }
-        else {
-            el.value = value;
-        }
-    }
-    else {
-        el.textContent = value;
-        if ('textContent' in el) {
-            el.textContent = value;
-        }
-        else {
-            el.innerText = value; // IE8 support
-        }
-    }
-}
-
 function setValues(el, key, value) {
     var parts = key.split('.');
     var name = parts[0];
@@ -152,7 +127,7 @@ function setValues(el, key, value) {
     for (var i = 0; i < items.length; i++) {
         var el = items[i];
         if (attr == 'value') {
-            if (el.tagName == 'input') {
+            if (el.tagName == 'INPUT') {
                 if (el.type == 'checkbox') {
                     el.checked = !!value;
                 }
@@ -173,6 +148,7 @@ function setValues(el, key, value) {
         else if (attr == 'style' && parts[2]) {
             // e.g. team1_colors.style.background = blue
             el.style[parts[2]] = value;
+            // TODO: properly handle team1_colors.style: {color: white, background: blue}
         }
         else {
             el[attr] = value;
@@ -201,19 +177,23 @@ function render(template, globals, locals) {
     return el;
 }
 
-var globals = {
-    team1_name: "Rangers",
-    team1_fg: "black",
-    team1_bg: "darkorange",
-    team2_name: "Giants",
-    team2_fg: "white",
-    team2_bg: "blue"
-};
+// -------- main --------
+
+var globals = {};
+
+if (document.location.search) {
+    globals = parseQuery(document.location.search);
+    setMultiValues($("#set_globals"), globals);
+}
+else {
+    globals = getValues($("#set_globals"));
+}
+
 $("#set_globals").onsubmit = function(event) {
     globals = getValues(event.target);
-    renderBoxes();
+    setMultiValues($('#boxes'), globals);
     $("#show-config").click();
-    return false;
+    // return false;
 }
 
 function renderBoxes() {
@@ -239,39 +219,34 @@ function updateMeters(input) {
     setMultiValues(game, {
         team1_pct: input.value,
         team2_pct: 100-input.value,
-        "meter_inner.style.width": input.value + "%"
+        "team1.style.width": input.value + "%",
+        "team2.style.width": 100-input.value + "%"
     });
 }
 
-function updateBoxes() {
-    setMultiValues($("#boxes", {
-
-    }));
-}
-
-team1_probs = [1, 1, 0, 0.50, 0.50, 0.50, 0.50];
-team2_probs = [];
-team1_won_yet = [];
-team2_won_yet = [];
-            for (var max_games = 0; max_games < 7; max_games++) {
-                team1_won_yet[max_games] = seriesProb(0, 0, max_games, team1_probs);
-                team2_won_yet[max_games] = seriesProb(0, 0, max_games, team2_probs);
-            }
-function seriesProb (game, wins, max_games, prob) {
-    if (wins >= 4) {
-        return 1;
-    }
-    else if (game - wins >= 4) {
-        return 0
-    }
-    else if (game > max_games) {
-        return 0;
-    }
-    else {
-        return(seriesProb(game+1, wins, max_games, prob) * (1-prob[game])
-             + seriesProb(game+1, wins+1, max_games, prob) * (prob[game]));
-    }
-}
+// team1_probs = [1, 1, 0, 0.50, 0.50, 0.50, 0.50];
+// team2_probs = [];
+// team1_won_yet = [];
+// team2_won_yet = [];
+//             for (var max_games = 0; max_games < 7; max_games++) {
+//                 team1_won_yet[max_games] = seriesProb(0, 0, max_games, team1_probs);
+//                 team2_won_yet[max_games] = seriesProb(0, 0, max_games, team2_probs);
+//             }
+// function seriesProb (game, wins, max_games, prob) {
+//     if (wins >= 4) {
+//         return 1;
+//     }
+//     else if (game - wins >= 4) {
+//         return 0
+//     }
+//     else if (game > max_games) {
+//         return 0;
+//     }
+//     else {
+//         return(seriesProb(game+1, wins, max_games, prob) * (1-prob[game])
+//              + seriesProb(game+1, wins+1, max_games, prob) * (prob[game]));
+//     }
+// }
 
 renderBoxes();
 
