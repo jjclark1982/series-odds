@@ -78,6 +78,9 @@
 <div id="main"></div>
 
 <script>
+
+/* -------- library -------- */
+
 var $ = document.querySelector.bind(document);
 var $$ = document.querySelectorAll.bind(document);
 
@@ -89,6 +92,15 @@ function parent(el, selector) {
         }
     } while (el != null);
     return null;
+}
+
+function percent (p, trunc) {
+    if (trunc) {
+        return Math.round(p * 10000) / 100 + "%";
+    }
+    else {
+        return p * 100 + "%";
+    }
 }
 
 function parseQuery(query) {
@@ -182,7 +194,7 @@ function render(template, globals, locals) {
     return el;
 }
 
-// -------- main --------
+/* -------- main -------- */
 
 var globals = {};
 
@@ -235,15 +247,6 @@ function seriesProb (game, wins, max_games, prob) {
     }
 }
 
-function percent (p, trunc) {
-    if (trunc) {
-        return Math.round(p * 10000) / 100 + "%";
-    }
-    else {
-        return p * 100 + "%";
-    }
-}
-
 function updateMeters(input) {
     var team1Probs = [];
     var team2Probs = [];
@@ -274,7 +277,7 @@ function updateMeters(input) {
     var play = $$(".play-chance");
     for (var i = 4; i < 7; i++) {
         setMultiValues(play[i-4], {
-            play_pct: percent(noWinYet[i], true)
+            play_pct: percent(noWinYet[i-1], true)
         });
     }
 }
