@@ -8,14 +8,14 @@
     fieldset { display: inline-block; }
     legend { text-align: center; }
 
-    .hamburger-menu { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
+    .menu-icon { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
     #show-config { display: none; }
     #show-config:checked + .config-screen { display: block; }
     .config-screen { display: none; }
     .config-screen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
     .config-form { position: fixed; left: 2.5em; text-align: right; display: inline-block; pointer-events: initial; }
 
-    #boxes { width: 400px; margin: auto; text-align: center; }
+    #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
     .meter-outer { background: gray; position: relative; height: 3em; text-align: left; }
     .team1-meter { display: inline-block; padding: 0.5em; }
@@ -26,11 +26,11 @@
 </head>
 <body>
 
-<label class="hamburger-menu" for="show-config">☰</label>
+<label class="menu-icon" for="show-config">☰</label>
 <input type="checkbox" id="show-config">
 <div class="config-screen">
     <label for="show-config" class="config-screen-overlay"></label>
-    <form class="config-form" id="set_globals">
+    <form class="config-form" id="set-globals">
         <fieldset>
             <legend>Configuration</legend>
             <label>Team 1: <input name="team1_name" value="Rangers" /></label><br>
@@ -75,7 +75,7 @@
     </div>
 </script>
 
-<div id="boxes"></div>
+<div id="main"></div>
 
 <script>
 var $ = document.querySelector.bind(document);
@@ -183,39 +183,39 @@ var globals = {};
 
 if (document.location.search) {
     globals = parseQuery(document.location.search);
-    setMultiValues($("#set_globals"), globals);
+    setMultiValues($("#set-globals"), globals);
 }
 else {
-    globals = getValues($("#set_globals"));
+    globals = getValues($("#set-globals"));
 }
 
-$("#set_globals").onsubmit = function(event) {
+$("#set-globals").onsubmit = function(event) {
     globals = getValues(event.target);
-    setMultiValues($('#boxes'), globals);
+    setMultiValues($('#main'), globals);
     $("#show-config").click();
     // return false;
 }
 
-function renderBoxes() {
-    var boxes = $("#boxes");
-    boxes.innerHTML = '';
+function renderMain() {
+    var main = $("#main");
+    main.innerHTML = '';
     for (var i = 1; i <= 7; i++) {
         var locals = { game_no: i }
         if (i >= 5) {
             var play = render($('#play-chance-template'), globals, locals);
-            boxes.append(play);
+            main.append(play);
         }
         var game = render($('#game-template'), globals, locals);
-        boxes.append(game);
+        main.append(game);
         if (i >= 4) {
             var win = render($('#final-win-template'), globals, locals);
-            boxes.append(win);
+            main.append(win);
         }
     }
 }
 
 function updateMeters(input) {
-    var game = parent(input, "#boxes");
+    var game = parent(input, "#main");
     setMultiValues(game, {
         team1_pct: input.value,
         team2_pct: 100-input.value,
@@ -248,6 +248,6 @@ function updateMeters(input) {
 //     }
 // }
 
-renderBoxes();
+renderMain();
 
 </script>
