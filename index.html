@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta http-equiv="content-type" content="text/html; charset=utf-8">
+<meta name="viewport" content="width=450">
 <title>Series Odds Calculator</title>
 <style type="text/css">
     * { box-sizing: border-box; }
@@ -59,7 +60,7 @@
         <fieldset>
             <legend class="game_label">Game <span name="game_no"></span></legend>
             <span>
-                <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)">
+                <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
             </span>
             <br>
         </div>
