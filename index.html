@@ -69,7 +69,7 @@
 <script type="text/html" id="play-chance-template">
     <p class="play-chance">
         Probability that Game <span name="game_no"></span> gets played:
-        <span name="play_pct">70%</span>
+        <span name="play_pct"></span>
     </p>
 </script>
 
@@ -88,8 +88,12 @@
 <script type="text/html" id="final-win-template">
     <div class="final-win">
         <div class="meter-outer">
-            <div class="team2-meter" name="team2"><span name="team2_name"></span><br>&nbsp;<span name="team2_pct">15%</span></div>
-            <div class="team1-meter" name="team1"><span name="team1_name"></span><br>&nbsp;<span name="team1_pct">15%</span></div>
+            <div class="team2-meter" name="team2">
+                <span name="team2_name"></span><br>&nbsp;<span name="team2_pct"></span>
+            </div>
+            <div class="team1-meter" name="team1">
+                <span name="team1_name"></span><br>&nbsp;<span name="team1_pct"></span>
+            </div>
         </div>
     </div>
 </script>
@@ -231,12 +235,12 @@ $("#set-globals").onsubmit = function(event) {
 }
 
 function renderMain() {
-    var main = $("#main");
-    main.innerHTML = '';
+    var mainEl = $("#main");
+    mainEl.innerHTML = '';
     for (var i = 1; i <= 7; i++) {
         var locals = { game_no: i }
         var game = render($('#game-template'), globals, locals);
-        main.append(game);
+        mainEl.append(game);
         if (i >= 5) {
             var play = render($('#play-chance-template'), globals, locals);
             game.prepend(play);
