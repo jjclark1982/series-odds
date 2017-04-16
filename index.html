@@ -219,15 +219,15 @@ function renderMain() {
     main.innerHTML = '';
     for (var i = 1; i <= 7; i++) {
         var locals = { game_no: i }
-        if (i >= 5) {
-            var play = render($('#play-chance-template'), globals, locals);
-            main.append(play);
-        }
         var game = render($('#game-template'), globals, locals);
         main.append(game);
+        if (i >= 5) {
+            var play = render($('#play-chance-template'), globals, locals);
+            game.prepend(play);
+        }
         if (i >= 4) {
             var win = render($('#final-win-template'), globals, locals);
-            main.append(win);
+            game.append(win);
         }
     }
 }
@@ -266,18 +266,13 @@ function updateMeters(input) {
         noWinYet[max_games] = 1 - team1WonYet[max_games] - team2WonYet[max_games];
     }
 
-    var meters = $$(".final-win");
-    for (var i = 3; i < 7; i++) {
-        setMultiValues(meters[i-3], {
+    var games = $$(".game");
+    for (var i = 0; i < 7; i++) {
+        setMultiValues(games[i], {
             team1_pct: percent(team1WonYet[i], true),
             team2_pct: percent(team2WonYet[i], true),
             "team1.style.width": percent(team1WonYet[i]),
-            "team2.style.width": percent(team2WonYet[i])
-        });
-    }
-    var play = $$(".play-chance");
-    for (var i = 4; i < 7; i++) {
-        setMultiValues(play[i-4], {
+            "team2.style.width": percent(team2WonYet[i]),
             play_pct: percent(noWinYet[i-1], true)
         });
     }
