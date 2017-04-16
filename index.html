@@ -9,12 +9,12 @@
     fieldset { display: inline-block; }
     legend { text-align: center; }
 
-    .menu-icon { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
-    #show-config { display: none; }
-    #show-config:checked + .config-screen { display: block; }
-    .config-screen { display: none; }
-    .config-screen-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
-    .config-form { position: fixed; top: 2.5em; text-align: right; display: inline-block; pointer-events: initial; }
+    .config-menu { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
+    #hide-config { display: none; }
+    #hide-config:checked + .config-screen { display: none; }
+    .config-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+    .config-foreground { position: fixed; top: 2.5em; text-align: right; display: inline-block; }
+    .config-foreground fieldset { background: white; }
 
     #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
@@ -27,25 +27,29 @@
 </head>
 <body>
 
-<label class="menu-icon" for="show-config">☰</label>
-<input type="checkbox" id="show-config">
+<div id="main"></div>
+
+<label class="config-menu" for="hide-config">☰</label>
+<input type="checkbox" id="hide-config" checked>
 <div class="config-screen">
-    <label for="show-config" class="config-screen-overlay"></label>
-    <form class="config-form" id="set-globals">
-        <fieldset>
-            <legend>Configuration</legend>
-            <label>Team 1: <input name="team1_name" value="Sharks" /></label><br>
-            <label>Color: <input name="team1.style.background" value="#006d75" /></label><br>
-            <label>Text: <input name="team1.style.color" value="white" /></label><br>
-            <br>
-            <label>Team 2: <input name="team2_name" value="Oilers" /></label><br>
-            <label>Color: <input name="team2.style.background" value="#00205b" /></label><br>
-            <label>Text: <input name="team2.style.color" value="white" /></label><br>
-            <br>
-            <button type="button" onclick="$('#show-config').click()">Cancel</button>
-            <button type="submit">Save</button>
-        </fieldset>
-    </form>
+    <label for="hide-config" class="config-background"></label>
+    <div class="config-foreground">
+        <form id="set-globals">
+            <fieldset>
+                <legend>Configuration</legend>
+                <label>Team 1: <input name="team1_name" value="Sharks" /></label><br>
+                <label>Color: <input name="team1.style.background" value="#006d75" /></label><br>
+                <label>Text: <input name="team1.style.color" value="white" /></label><br>
+                <br>
+                <label>Team 2: <input name="team2_name" value="Oilers" /></label><br>
+                <label>Color: <input name="team2.style.background" value="#00205b" /></label><br>
+                <label>Text: <input name="team2.style.color" value="white" /></label><br>
+                <br>
+                <button type="button" onclick="$('#hide-config').click()">Cancel</button>
+                <button type="submit">Save</button>
+            </fieldset>
+        </form>
+    </div>
 </div>
 
 <script type="text/html" id="play-chance-template">
@@ -75,8 +79,6 @@
         </div>
     </div>
 </script>
-
-<div id="main"></div>
 
 <script>
 
@@ -210,7 +212,7 @@ else {
 $("#set-globals").onsubmit = function(event) {
     globals = getValues(event.target);
     setMultiValues($('#main'), globals);
-    $("#show-config").click();
+    // $("#hide-config").click();
     // return false;
 }
 
