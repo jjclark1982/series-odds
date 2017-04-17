@@ -16,16 +16,18 @@
     .config-menu { position: fixed; top: 3em; left: 1em; display: inline-block; background: white; box-shadow: 0px 3px 10px 0px rgba(0,0,0,0.5); }
     .config-menu > * { margin: 1em; }
     .config-menu fieldset { text-align: right; background: white; }
-    .github-link { text-align: left; }
     .github-link > a { text-decoration: none; }
     .github-link > a:hover { text-decoration: underline; }
 
     #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
-    .meter-outer { background: gray; position: relative; text-align: left; }
-    .team1-meter { display: inline-block; padding: 0.5em; }
-    .team2-meter { position: absolute; right: 0; padding: 0.5em; text-align: right; }
-    .range { width: 250px; }
+    .range { width: 300px; }
+    .meter-outer { background: gray; position: relative; text-align: left; height: 3em; }
+    .meter-color { width: 100%; height: 100%; }
+    .meter-inner { position: absolute; height: 100%; }
+    .meter-inner.team2 { right: 0; }
+    .meter-label { position: absolute; padding: 0.5em; }
+    .meter-label.team2 { right: 0; text-align: right; }
 </style>
 
 </head>
@@ -42,12 +44,12 @@
             <fieldset>
                 <legend>Configuration</legend>
                 <label>Team 1: <input name="team1_name" value="Sharks" /></label><br>
-                <label>Color: <input name="team1.style.background" value="#006d75" /></label><br>
-                <label>Text: <input name="team1.style.color" value="white" /></label><br>
+                <label>Color: <input name="team1_background" value="#006d75" /></label><br>
+                <label>Text Color: <input name="team1_color" value="white" /></label><br>
                 <br>
                 <label>Team 2: <input name="team2_name" value="Oilers" /></label><br>
-                <label>Color: <input name="team2.style.background" value="#00205b" /></label><br>
-                <label>Text: <input name="team2.style.color" value="white" /></label><br>
+                <label>Color: <input name="team2_background" value="#00205b" /></label><br>
+                <label>Text Color: <input name="team2_color" value="white" /></label><br>
                 <br>
                 <button type="button" onclick="$('#hide-config').click()">Cancel</button>
                 <button type="submit">Save</button>
@@ -68,15 +70,15 @@
 
 <script type="text/html" id="play-chance-template">
     <p class="play-chance">
-        Probability that Game <span name="game_no"></span> gets played:
-        <span name="play_pct"></span>
+        Probability that Game <span data-name="game_no"></span> gets played:
+        <span data-name="play_pct"></span>
     </p>
 </script>
 
 <script type="text/html" id="game-template">
     <div class="game">
         <fieldset>
-            <legend class="game_label">Game <span name="game_no"></span></legend>
+            <legend class="game_label">Game <span data-name="game_no"></span></legend>
             <span>
                 <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
             </span>
@@ -88,11 +90,21 @@
 <script type="text/html" id="final-win-template">
     <div class="final-win">
         <div class="meter-outer">
-            <div class="team2-meter" name="team2">
-                <span name="team2_name"></span><br>&nbsp;<span name="team2_pct"></span>
+            <div class="meter-inner team1" data-name="team1_pct" data-target="style.width">
+                <div class="meter-color" data-name="team1_background" data-target="style.background"></div>
             </div>
-            <div class="team1-meter" name="team1">
-                <span name="team1_name"></span><br>&nbsp;<span name="team1_pct"></span>
+            <div class="meter-inner team2" data-name="team2_pct" data-target="style.width">
+                <div class="meter-color" data-name="team2_background" data-target="style.background"></div>
+            </div>
+            <div class="meter-label team2" data-name="team2_color" data-target="style.color">
+                <span data-name="team2_name"></span>
+                <br>
+                <span data-name="team2_pct"></span>
+            </div>
+            <div class="meter-label team1" data-name="team1_color" data-target="style.color">
+                <span data-name="team1_name"></span>
+                <br>
+                <span data-name="team1_pct"></span>
             </div>
         </div>
     </div>
@@ -151,15 +163,14 @@ function getValues(form) {
     return values
 }
 
-function setValues(el, key, value) {
-    var parts = key.split('.');
-    var name = parts[0];
-    var attr = parts[1] || 'value';
-
-    var items = el.querySelectorAll('[name="'+name+'"]');
+function setValues(el, name, value, searchAttr) {
+    searchAttr = searchAttr || 'data-name';
+    var items = el.querySelectorAll('['+searchAttr+'="'+name+'"]');
     for (var i = 0; i < items.length; i++) {
         var el = items[i];
-        if (attr == 'value') {
+        var target = el.getAttribute('data-target') || 'value';
+        if (target == 'value') {
+            // when no 'data-target' is given, set the 'value' which varies by tag
             if (el.tagName == 'INPUT') {
                 if (el.type == 'checkbox') {
                     el.checked = !!value;
@@ -178,18 +189,19 @@ function setValues(el, key, value) {
                 }
             }
         }
-        else if (attr == 'style') {
-            if (parts[2]) {
-                // e.g. team1.style.background = blue
-                el.style[parts[2]] = value;
-            }
-            else {
-                // e.g. team1.style: {color: white, background: blue}
-                Object.assign(el.style, value);
-            }
-        }
         else {
-            el[attr] = value;
+            // when some 'data-target' is given, set that attribute
+            // e.g.: <data-name="banner_size" data-target="width"> would run
+            //       el.width = value;
+            // but if 'data-target' has more than one part, drill down to set it
+            // e.g.: <data-name="banner_size" data-target="style.width"> would run
+            //       el.style.width = value;
+            var parts = target.split('.');
+            var cursor = el;
+            while (parts.length > 1) {
+                cursor = cursor[parts.shift()];
+            }
+            cursor[parts[0]] = value;
         }
     }
 }
@@ -291,8 +303,6 @@ function updateMeters(input) {
         setMultiValues(games[i], {
             team1_pct: percent(team1WonYet[i], true),
             team2_pct: percent(team2WonYet[i], true),
-            "team1.style.width": percent(team1WonYet[i]),
-            "team2.style.width": percent(team2WonYet[i]),
             play_pct: percent(noWinYet[i-1], true)
         });
     }
