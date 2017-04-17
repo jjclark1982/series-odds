@@ -30,7 +30,6 @@
     .meter-label.team1 { left: 0; text-align: left; }
     .meter-label.team2 { right: 0; text-align: right; }
 </style>
-
 </head>
 <body>
 
@@ -71,15 +70,15 @@
 
 <script type="text/html" id="play-chance-template">
     <p class="play-chance">
-        Probability that Game <span data-name="game_no"></span>
-        gets played: <span data-name="play_pct"></span>
+        Probability that Game <span name="game_no"></span>
+        gets played: <span name="play_pct"></span>
     </p>
 </script>
 
 <script type="text/html" id="game-template">
     <div class="game">
         <fieldset>
-            <legend>Game <span data-name="game_no"></span></legend>
+            <legend>Game <span name="game_no"></span></legend>
             <input name="team1_prob" class="range" type="range" min="0" max="1" step="0.01" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
         </fieldset>
     </div>
@@ -88,19 +87,19 @@
 <script type="text/html" id="final-win-template">
     <div class="final-win">
         <div class="meter-outer">
-            <div class="meter-inner team1" data-name="team1_pct" data-target="style.width">
-                <div class="meter-color" data-name="team1_background" data-target="style.background"></div>
+            <div class="meter-inner team1" name="team1_pct" data-target="style.width">
+                <div class="meter-color" name="team1_background" data-target="style.background"></div>
             </div>
-            <div class="meter-inner team2" data-name="team2_pct" data-target="style.width">
-                <div class="meter-color" data-name="team2_background" data-target="style.background"></div>
+            <div class="meter-inner team2" name="team2_pct" data-target="style.width">
+                <div class="meter-color" name="team2_background" data-target="style.background"></div>
             </div>
-            <div class="meter-label team2" data-name="team2_color" data-target="style.color">
-                <span data-name="team2_name"></span><br>
-                <span data-name="team2_pct"></span>
+            <div class="meter-label team2" name="team2_color" data-target="style.color">
+                <span name="team2_name"></span><br>
+                <span name="team2_pct"></span>
             </div>
-            <div class="meter-label team1" data-name="team1_color" data-target="style.color">
-                <span data-name="team1_name"></span><br>
-                <span data-name="team1_pct"></span>
+            <div class="meter-label team1" name="team1_color" data-target="style.color">
+                <span name="team1_name"></span><br>
+                <span name="team1_pct"></span>
             </div>
         </div>
     </div>
@@ -150,9 +149,9 @@ function getValues(form) {
     return values
 }
 
-function setValues(el, name, value, searchAttr) {
-    searchAttr = searchAttr || 'data-name';
-    var items = el.querySelectorAll('['+searchAttr+'="'+name+'"]');
+function setValue(el, name, value) {
+    var selector = '[name="'+name+'"]'; // e.g.: [name="team1_color"]
+    var items = el.querySelectorAll(selector);
     for (var i = 0; i < items.length; i++) {
         var el = items[i];
         var target = el.getAttribute('data-target') || 'value';
@@ -167,7 +166,6 @@ function setValues(el, name, value, searchAttr) {
                 }
             }
             else {
-                el.textContent = value;
                 if ('textContent' in el) {
                     el.textContent = value;
                 }
@@ -178,10 +176,10 @@ function setValues(el, name, value, searchAttr) {
         }
         else {
             // when some 'data-target' is given, set that attribute
-            // e.g.: <data-name="banner_size" data-target="width"> would run
+            // e.g.: <name="banner_size" data-target="width"> would run
             //       el.width = value;
             // but if 'data-target' has more than one part, drill down to set it
-            // e.g.: <data-name="banner_size" data-target="style.width"> would run
+            // e.g.: <name="banner_size" data-target="style.width"> would run
             //       el.style.width = value;
             var parts = target.split('.');
             var cursor = el;
@@ -193,9 +191,9 @@ function setValues(el, name, value, searchAttr) {
     }
 }
 
-function setMultiValues(el, context) {
+function setValues(el, context) {
     Object.keys(context).forEach(function(key){
-        setValues(el, key, context[key]);
+        setValue(el, key, context[key]);
     });
 }
 
@@ -209,7 +207,7 @@ function render(template, globals, locals) {
     container.innerHTML = html.trim();
     var el = container.firstChild;
 
-    setMultiValues(el, context);
+    setValues(el, context);
 
     return el;
 }
@@ -220,7 +218,7 @@ var globals = {};
 
 if (document.location.search) {
     globals = parseQuery(document.location.search);
-    setMultiValues($("#set-globals"), globals);
+    setValues($("#set-globals"), globals);
 }
 else {
     globals = getValues($("#set-globals"));
@@ -228,7 +226,7 @@ else {
 
 $("#set-globals").onsubmit = function(event) {
     globals = getValues(event.target);
-    setMultiValues($('#main'), globals);
+    setValues($('#main'), globals);
     $('#hide-config').click();
     // return false;
 }
@@ -287,7 +285,7 @@ function updateMeters(input) {
 
     var games = $$('.game');
     for (var i = 0; i < 7; i++) {
-        setMultiValues(games[i], {
+        setValues(games[i], {
             team1_pct: percent(team1WonYet[i]),
             team2_pct: percent(team2WonYet[i]),
             play_pct: percent(noWinYet[i-1])
