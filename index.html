@@ -70,15 +70,15 @@
 
 <script type="text/html" id="play-chance-template">
     <p class="play-chance">
-        Probability that Game <span data-name="game_no"></span> gets played:
-        <span data-name="play_pct"></span>
+        Probability that Game <span data-name="game_no"></span>
+        gets played: <span data-name="play_pct"></span>
     </p>
 </script>
 
 <script type="text/html" id="game-template">
     <div class="game">
         <fieldset>
-            <legend class="game_label">Game <span data-name="game_no"></span></legend>
+            <legend>Game <span data-name="game_no"></span></legend>
             <span>
                 <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
             </span>
@@ -97,13 +97,11 @@
                 <div class="meter-color" data-name="team2_background" data-target="style.background"></div>
             </div>
             <div class="meter-label team2" data-name="team2_color" data-target="style.color">
-                <span data-name="team2_name"></span>
-                <br>
+                <span data-name="team2_name"></span><br>
                 <span data-name="team2_pct"></span>
             </div>
             <div class="meter-label team1" data-name="team1_color" data-target="style.color">
-                <span data-name="team1_name"></span>
-                <br>
+                <span data-name="team1_name"></span><br>
                 <span data-name="team1_pct"></span>
             </div>
         </div>
@@ -117,18 +115,9 @@
 var $ = document.querySelector.bind(document);
 var $$ = document.querySelectorAll.bind(document);
 
-function parent(el, selector) {
-    do {
-        el = el.parentElement;
-        if (el.matches(selector)) {
-            return el;
-        }
-    } while (el != null);
-    return null;
-}
-
 function percent (p, trunc) {
     if (trunc) {
+        // truncate to between 0 and 2 figures of precision
         return Math.round(p * 10000) / 100 + "%";
     }
     else {
@@ -242,17 +231,16 @@ else {
 $("#set-globals").onsubmit = function(event) {
     globals = getValues(event.target);
     setMultiValues($('#main'), globals);
-    // $("#hide-config").click();
+    $("#hide-config").click();
     // return false;
 }
 
 function renderMain() {
-    var mainEl = $("#main");
+    var mainEl = $('#main');
     mainEl.innerHTML = '';
     for (var i = 1; i <= 7; i++) {
-        var locals = { game_no: i }
+        var locals = { game_no: i };
         var game = render($('#game-template'), globals, locals);
-        mainEl.append(game);
         if (i >= 5) {
             var play = render($('#play-chance-template'), globals, locals);
             game.prepend(play);
@@ -261,6 +249,7 @@ function renderMain() {
             var win = render($('#final-win-template'), globals, locals);
             game.append(win);
         }
+        mainEl.append(game);
     }
 }
 
@@ -269,7 +258,7 @@ function seriesProb (game, wins, max_games, prob) {
         return 1;
     }
     else if (game - wins >= 4) {
-        return 0
+        return 0;
     }
     else if (game > max_games) {
         return 0;
@@ -307,6 +296,8 @@ function updateMeters(input) {
         });
     }
 }
+
+/* -------- init -------- */
 
 renderMain();
 updateMeters();
