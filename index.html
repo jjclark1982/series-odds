@@ -9,7 +9,7 @@
     fieldset { display: inline-block; }
     legend { text-align: center; }
 
-    .menu-icon { position: absolute; top: 0; left: 0; padding: 1em; cursor: pointer; }
+    .menu-icon { position: fixed; top: 0; left: 0; padding: 1em; cursor: pointer; }
     #hide-config { display: none; }
     #hide-config:checked + .config-screen { display: none; }
     .config-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.25); }
@@ -22,11 +22,12 @@
     #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
     .range { width: 300px; }
-    .meter-outer { background: gray; position: relative; text-align: left; height: 3em; }
+    .meter-outer { background: gray; position: relative; left: 2px; height: 4em; }
     .meter-color { width: 100%; height: 100%; }
     .meter-inner { position: absolute; height: 100%; }
     .meter-inner.team2 { right: 0; }
-    .meter-label { position: absolute; padding: 0.5em; }
+    .meter-label { position: absolute; padding: 0.5em 1em; line-height: 1.5em; }
+    .meter-label.team1 { left: 0; text-align: left; }
     .meter-label.team2 { right: 0; text-align: right; }
 </style>
 
@@ -79,12 +80,9 @@
     <div class="game">
         <fieldset>
             <legend>Game <span data-name="game_no"></span></legend>
-            <span>
-                <input class="range" type="range" min="0" max="100" pattern="\d*" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
-            </span>
-            <br>
-        </div>
-    </fieldset>
+            <input name="team1_prob" class="range" type="range" min="0" max="1" step="0.01" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
+        </fieldset>
+    </div>
 </script>
 
 <script type="text/html" id="final-win-template">
@@ -115,13 +113,13 @@
 var $ = document.querySelector.bind(document);
 var $$ = document.querySelectorAll.bind(document);
 
-function percent (p, trunc) {
-    if (trunc) {
-        // truncate to between 0 and 2 figures of precision
-        return Math.round(p * 10000) / 100 + "%";
+function percent (p, exact) {
+    if (exact) {
+        return p * 100 + '%';
     }
     else {
-        return p * 100 + "%";
+        // truncate to between 0 and 2 figures of precision
+        return Math.round(p * 10000) / 100 + '%';
     }
 }
 
@@ -231,7 +229,7 @@ else {
 $("#set-globals").onsubmit = function(event) {
     globals = getValues(event.target);
     setMultiValues($('#main'), globals);
-    $("#hide-config").click();
+    $('#hide-config').click();
     // return false;
 }
 
@@ -272,10 +270,10 @@ function seriesProb (game, wins, max_games, prob) {
 function updateMeters(input) {
     var team1Probs = [];
     var team2Probs = [];
-    var inputs = $$(".range");
+    var inputs = $$('[name="team1_prob"]');
     for (var i = 0; i < inputs.length; i++) {
-        team1Probs[i] = inputs[i].value / 100;
-        team2Probs[i] = 1 - (inputs[i].value/100);
+        team1Probs[i] = inputs[i].value;
+        team2Probs[i] = 1 - inputs[i].value;
     }
 
     var team1WonYet = [];
@@ -287,12 +285,12 @@ function updateMeters(input) {
         noWinYet[max_games] = 1 - team1WonYet[max_games] - team2WonYet[max_games];
     }
 
-    var games = $$(".game");
+    var games = $$('.game');
     for (var i = 0; i < 7; i++) {
         setMultiValues(games[i], {
-            team1_pct: percent(team1WonYet[i], true),
-            team2_pct: percent(team2WonYet[i], true),
-            play_pct: percent(noWinYet[i-1], true)
+            team1_pct: percent(team1WonYet[i]),
+            team2_pct: percent(team2WonYet[i]),
+            play_pct: percent(noWinYet[i-1])
         });
     }
 }
