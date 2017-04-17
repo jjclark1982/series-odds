@@ -21,7 +21,7 @@
 
     #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
-    .range { width: 300px; }
+    .range { width: 250px; }
     .meter-outer { background: gray; position: relative; left: 2px; height: 4em; }
     .meter-color { width: 100%; height: 100%; }
     .meter-inner { position: absolute; height: 100%; }
@@ -76,10 +76,12 @@
 </script>
 
 <script type="text/html" id="game-template">
-    <div class="game">
+    <div class="game" name="game_no" data-target="data-game-no">
         <fieldset>
             <legend>Game <span name="game_no"></span></legend>
-            <input name="team1_prob" class="range" type="range" min="0" max="1" step="0.01" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
+            <input name="team1_pct_n" type="number" value="50" min="0" max="100" onchange="updateMeters(this)" onclick="updateMeters(this)" onkeyup="updateMeters(this)">
+            <input name="team1_pct_n" class="range" type="range" min="0" max="100" step="1" value="50" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
+            <input name="team2_pct_n" type="number" value="50" min="0" max="100" onchange="updateMeters(this)" onclick="updateMeters(this)" onkeyup="updateMeters(this)">
         </fieldset>
     </div>
 </script>
@@ -111,6 +113,16 @@
 
 var $ = document.querySelector.bind(document);
 var $$ = document.querySelectorAll.bind(document);
+
+function parent(el, selector) {
+    do {
+        el = el.parentElement;
+        if (el.matches(selector)) {
+            return el;
+        }
+    } while (el != null);
+    return null;
+}
 
 function percent (p, exact) {
     if (exact) {
@@ -149,39 +161,39 @@ function getValues(form) {
     return values
 }
 
-function setValue(el, name, value) {
-    var selector = '[name="'+name+'"]'; // e.g.: [name="team1_color"]
-    var items = el.querySelectorAll(selector);
-    for (var i = 0; i < items.length; i++) {
-        var el = items[i];
-        var target = el.getAttribute('data-target') || 'value';
-        if (target == 'value') {
-            // when no 'data-target' is given, set the 'value' which varies by tag
-            if (el.tagName == 'INPUT') {
-                if (el.type == 'checkbox') {
-                    el.checked = !!value;
-                }
-                else {
-                    el.value = value;
-                }
+function setValue(el, value) {
+    var target = el.getAttribute('data-target') || 'value';
+    if (target == 'value') {
+        // when no 'data-target' is given, set the 'value' which varies by tag
+        if (el.tagName == 'INPUT') {
+            if (el.type == 'checkbox') {
+                el.checked = !!value;
             }
             else {
-                if ('textContent' in el) {
-                    el.textContent = value;
-                }
-                else {
-                    el.innerText = value; // IE8 support
-                }
+                el.value = value;
             }
         }
         else {
+            if ('textContent' in el) {
+                el.textContent = value;
+            }
+            else {
+                el.innerText = value; // IE8 support
+            }
+        }
+    }
+    else {
+        var parts = target.split('.');
+        if (parts.length == 1) {
             // when some 'data-target' is given, set that attribute
             // e.g.: <name="banner_size" data-target="width"> would run
             //       el.width = value;
+            el.setAttribute(target, value);
+        }
+        else {
             // but if 'data-target' has more than one part, drill down to set it
             // e.g.: <name="banner_size" data-target="style.width"> would run
             //       el.style.width = value;
-            var parts = target.split('.');
             var cursor = el;
             while (parts.length > 1) {
                 cursor = cursor[parts.shift()];
@@ -192,8 +204,16 @@ function setValue(el, name, value) {
 }
 
 function setValues(el, context) {
-    Object.keys(context).forEach(function(key){
-        setValue(el, key, context[key]);
+    Object.keys(context).forEach(function(name){
+        var value = context[name];
+        var selector = '[name="'+name+'"]'; // e.g.: [name="team1_color"]
+        var items = el.querySelectorAll(selector);
+        for (var i = 0; i < items.length; i++) {
+            setValue(items[i], value);
+        }
+        if (el.matches(selector)) {
+            setValue(el, value);
+        }
     });
 }
 
@@ -268,12 +288,30 @@ function seriesProb (game, wins, max_games, prob) {
 function updateMeters(input) {
     var team1Probs = [];
     var team2Probs = [];
-    var inputs = $$('[name="team1_prob"]');
-    for (var i = 0; i < inputs.length; i++) {
-        team1Probs[i] = inputs[i].value;
-        team2Probs[i] = 1 - inputs[i].value;
+
+    // read all values, including conflicting pct_n inputs
+    var games = $$('.game');
+    for (var i = 0; i < games.length; i++) {
+        var entry = games[i].querySelector('[name="team2_pct_n"]');
+        team1Probs[i] = 1 - entry.value/100;
+        team2Probs[i] = entry.value/100;
     }
 
+    // if `input` change was from user input, override any conflicting data
+    if (input) {
+        var game = parent(input, '.game');
+        var game_no = game.getAttribute('data-game-no')-1;
+        if (input.name == "team1_pct_n") {
+            team1Probs[game_no] = input.value/100;
+            team2Probs[game_no] = 1 - input.value/100;
+        }
+        else {
+            team1Probs[game_no] = 1 - input.value/100;
+            team2Probs[game_no] = input.value/100;
+        }
+    }
+
+    // compute the new probabilities
     var team1WonYet = [];
     var team2WonYet = [];
     var noWinYet = [];
@@ -283,9 +321,11 @@ function updateMeters(input) {
         noWinYet[max_games] = 1 - team1WonYet[max_games] - team2WonYet[max_games];
     }
 
-    var games = $$('.game');
+    // display the results
     for (var i = 0; i < 7; i++) {
         setValues(games[i], {
+            team1_pct_n: Math.round(team1Probs[i]*100),
+            team2_pct_n: Math.round(team2Probs[i]*100),
             team1_pct: percent(team1WonYet[i]),
             team2_pct: percent(team2WonYet[i]),
             play_pct: percent(noWinYet[i-1])
