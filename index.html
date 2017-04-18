@@ -11,9 +11,11 @@
 
     .menu-icon { position: fixed; top: 0; left: 0; padding: 1em; cursor: pointer; }
     #hide-config { display: none; }
-    #hide-config:checked + .config-screen { display: none; }
-    .config-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.25); }
-    .config-menu { position: fixed; top: 3em; left: 1em; display: inline-block; background: white; box-shadow: 0px 3px 10px 0px rgba(0,0,0,0.5); }
+    #hide-config:checked + .config-screen { background: transparent; pointer-events: none; }
+    .config-screen { transition: all 250ms; background: rgba(0,0,0,0.25); position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+    .config-background { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
+    .config-menu { transition: all 250ms; position: fixed; top: 3em; left: 1em; display: inline-block; background: white; box-shadow: 0px 3px 20px 0px rgba(0,0,0,0.5); }
+    #hide-config:checked + .config-screen > .config-menu { left: -20em; }
     .config-menu > * { margin: 1em; }
     .config-menu fieldset { text-align: right; background: white; }
     .github-link > a { text-decoration: none; }
@@ -22,6 +24,7 @@
     #main { width: 400px; margin: auto; text-align: center; }
     .game fieldset { width: 100%; }
     .range { width: 250px; }
+    input[type="number"] { width: 4em; }
     .meter-outer { background: gray; position: relative; left: 2px; height: 4em; }
     .meter-color { width: 100%; height: 100%; }
     .meter-inner { position: absolute; height: 100%; }
@@ -29,6 +32,19 @@
     .meter-label { position: absolute; padding: 0.5em 1em; line-height: 1.5em; }
     .meter-label.team1 { left: 0; text-align: left; }
     .meter-label.team2 { right: 0; text-align: right; }
+
+    /* http://danielstern.ca/range.css/ */
+    input[type=range] { -webkit-appearance: none; width: 250px; margin: -1px 0; margin: 1em; }
+    input[type=range]:focus { outline: none; }
+    input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 40px; cursor: pointer; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); background: #666; border-radius: 20px; border: 1px solid #000000; }
+    input[type=range]::-webkit-slider-thumb { box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); border: 2.5px solid #000000; height: 38px; width: 38px; border-radius: 50px; background: #c4c4c4; cursor: pointer; -webkit-appearance: none; margin-top: 0px; }
+    input[type=range]::-moz-range-track { width: 100%; height: 40px; cursor: pointer; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); background: #666; border-radius: 20px; border: 1px solid #000000; }
+    input[type=range]::-moz-range-thumb { box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); border: 2.5px solid #000000; height: 38px; width: 38px; border-radius: 50px; background: #c4c4c4; cursor: pointer; }
+    input[type=range]::-ms-track { width: 100%; height: 40px; cursor: pointer; background: transparent; border-color: transparent; color: transparent; }
+    input[type=range]::-ms-fill-lower { background: #2c8044; border: 1px solid #000000; border-radius: 20px; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); }
+    input[type=range]::-ms-fill-upper { background: #666; border: 1px solid #000000; border-radius: 20px; box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); }
+    input[type=range]::-ms-thumb { box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5), 0px 0px 1px rgba(13, 13, 13, 0.5); border: 2.5px solid #000000; width: 38px; border-radius: 50px; background: #c4c4c4; cursor: pointer; height: 38px; }
+    input[type=range]:focus::-ms-fill-lower { background: #666; }
 </style>
 </head>
 <body>
@@ -219,7 +235,7 @@ function setValues(el, context) {
 
 function render(template, globals, locals) {
     template = template || '';
-    var context = Object.assign({}, globals);
+    var context = Object.assign({}, globals); // not supported by any IE
     context = Object.assign(context, locals);
 
     var container = document.createElement('div');
@@ -297,15 +313,15 @@ function updateMeters(input) {
         team2Probs[i] = entry.value/100;
     }
 
-    // if `input` change was from user input, override any conflicting data
+    // if 'input' change was from a user, override any conflicting data
     if (input) {
         var game = parent(input, '.game');
         var game_no = game.getAttribute('data-game-no')-1;
-        if (input.name == "team1_pct_n") {
+        if (input.name == 'team1_pct_n') {
             team1Probs[game_no] = input.value/100;
             team2Probs[game_no] = 1 - input.value/100;
         }
-        else {
+        else if (input.name == 'team2_pct_n') {
             team1Probs[game_no] = 1 - input.value/100;
             team2Probs[game_no] = input.value/100;
         }
