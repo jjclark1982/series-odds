@@ -309,20 +309,26 @@ function seriesProb (game, wins, max_games, prob) {
 function setProb(input) {
     var probs = globals.probs || [];
 
-    if (input) {
-        if (input.type == 'reset') {
-            probs = [50,50,50,50,50,50,50];
+    if (!input) {
+        if (!Array.isArray(probs)) {
+            probs = [];
         }
-        else {
-            // if 'input' change was from a user, update only that field
-            var game = parent(input, '.game');
-            var game_no = game.getAttribute('data-game-no');
-            if (input.name == 'team1_pct_n') {
-                probs[game_no-1] = input.value;
-            }
-            else if (input.name == 'team2_pct_n') {
-                probs[game_no-1] = 100 - input.value;
-            }
+        while (probs.length < 7) {
+            probs.push(50);
+        }
+    }
+    else if (input.type == 'reset') {
+        probs = [50,50,50,50,50,50,50];
+    }
+    else {
+        // if 'input' change was from a user, update only that field
+        var game = parent(input, '.game');
+        var game_no = game.getAttribute('data-game-no');
+        if (input.name == 'team1_pct_n') {
+            probs[game_no-1] = input.value;
+        }
+        else if (input.name == 'team2_pct_n') {
+            probs[game_no-1] = 100 - input.value;
         }
     }
 
@@ -376,13 +382,11 @@ $('#config-panel').onsubmit = function(event) {
 
 function initGlobals() {
     // initialize globals from either query or config-panel
-    var globals;
+    var globals = getValues($('#config-panel'));
     if (document.location.search) {
-        globals = parseQuery(document.location.search);
+        var overrides = parseQuery(document.location.search);
+        Object.assign(globals, overrides);
         setValues($('#config-panel'), globals);
-    }
-    else {
-        globals = getValues($('#config-panel'));
     }
     return globals;
 }
