@@ -46,8 +46,8 @@
     input[type=range]:focus::-ms-fill-lower { background: #666; }
 
     body {
-        background: #333; color: white;
-        /* Permalink - use to edit and share this gradient: http://colorzilla.com/gradient-editor/#113970+0,222222+100 */
+        color: white;
+        /* http://colorzilla.com/gradient-editor/#113970+0,222222+100 */
         background: #113970; /* Old browsers */
         background: -moz-linear-gradient(top, #113970 0%, #222222 100%); /* FF3.6-15 */
         background: -webkit-linear-gradient(top, #113970 0%,#222222 100%); /* Chrome10-25,Safari5.1-6 */
@@ -59,14 +59,14 @@
 </head>
 <body>
 
-<div id="main"></div>
+<main id="main"></main>
 
 <label class="menu-icon" for="hide-config">☰</label>
 <input type="checkbox" id="hide-config" checked>
 <div class="config-screen">
     <label for="hide-config" class="config-background"></label>
     <div class="config-menu">
-        <form id="set-globals">
+        <form id="config-panel">
             <fieldset>
                 <legend>Configuration</legend>
                 <label>Team 1: <input name="team1_name" value="Sharks" /></label><br>
@@ -77,6 +77,8 @@
                 <label>Color: <input name="team2_background" value="#00205b" /></label><br>
                 <label>Text Color: <input name="team2_color" value="white" /></label><br>
                 <br>
+                <input type="hidden" name="probs" value="50,50,50,50,50,50,50" />
+                <button type="reset" onclick="setProb(this)">Reset</button>
                 <button type="button" onclick="$('#hide-config').click()">Cancel</button>
                 <button type="submit">Save</button>
             </fieldset>
@@ -105,9 +107,9 @@
     <div class="game" name="game_no" data-target="data-game-no">
         <fieldset>
             <legend>Game <span name="game_no"></span></legend>
-            <input name="team1_pct_n" type="number" value="50" min="0" max="100" onchange="updateMeters(this)" onclick="updateMeters(this)" onkeyup="updateMeters(this)">
-            <input name="team1_pct_n" class="range" type="range" min="0" max="100" step="1" value="50" onchange="updateMeters(this)" onmousemove="updateMeters(this)" ontouchmove="updateMeters(this)">
-            <input name="team2_pct_n" type="number" value="50" min="0" max="100" onchange="updateMeters(this)" onclick="updateMeters(this)" onkeyup="updateMeters(this)">
+            <input name="team1_pct_n" type="number" value="50" min="0" max="100" onclick="setProb(this)" onkeyup="setProb(this)">
+            <input name="team1_pct_n" class="range" type="range" min="0" max="100" step="1" value="50" onmousemove="setProb(this)" ontouchmove="setProb(this)">
+            <input name="team2_pct_n" type="number" value="50" min="0" max="100" onclick="setProb(this)" onkeyup="setProb(this)">
         </fieldset>
     </div>
 </script>
@@ -168,6 +170,9 @@ function parseQuery(query) {
         var parts = item.split('=');
         var key = decodeURIComponent(parts[0]);
         var value = decodeURIComponent(parts[1]);
+        if (value.match(/,/)) {
+            value = value.split(/,/);
+        }
         obj[key] = value;
     });
     return obj;
@@ -182,12 +187,16 @@ function getValues(form) {
         if (field.type == 'checkbox') {
             value = field.checked;
         }
+        if (value.match(/,/)) {
+            value = value.split(/,/);
+        }
         values[field.name] = value;
     }
     return values
 }
 
 function setValue(el, value) {
+    // TODO: consider supporting 'data-index' for compound values
     var target = el.getAttribute('data-target') || 'value';
     if (target == 'value') {
         // when no 'data-target' is given, set the 'value' which varies by tag
@@ -258,30 +267,16 @@ function render(template, globals, locals) {
     return el;
 }
 
-/* -------- main -------- */
-
-var globals = {};
-
-if (document.location.search) {
-    globals = parseQuery(document.location.search);
-    setValues($("#set-globals"), globals);
-}
-else {
-    globals = getValues($("#set-globals"));
-}
-
-$("#set-globals").onsubmit = function(event) {
-    globals = getValues(event.target);
-    setValues($('#main'), globals);
-    $('#hide-config').click();
-    // return false;
-}
+/* -------- app -------- */
 
 function renderMain() {
     var mainEl = $('#main');
     mainEl.innerHTML = '';
     for (var i = 1; i <= 7; i++) {
-        var locals = { game_no: i };
+        var locals = {
+            game_no: i,
+            team1_pct_n: globals.probs[i-1]
+        };
         var game = render($('#game-template'), globals, locals);
         if (i >= 5) {
             var play = render($('#play-chance-template'), globals, locals);
@@ -311,33 +306,43 @@ function seriesProb (game, wins, max_games, prob) {
     }
 }
 
-function updateMeters(input) {
+function setProb(input) {
+    var probs = globals.probs || [];
+
+    if (input) {
+        if (input.type == 'reset') {
+            probs = [50,50,50,50,50,50,50];
+        }
+        else {
+            // if 'input' change was from a user, update only that field
+            var game = parent(input, '.game');
+            var game_no = game.getAttribute('data-game-no');
+            if (input.name == 'team1_pct_n') {
+                probs[game_no-1] = input.value;
+            }
+            else if (input.name == 'team2_pct_n') {
+                probs[game_no-1] = 100 - input.value;
+            }
+        }
+    }
+
+    globals.probs = probs;
+    setValues($('#config-panel'), globals);
+
+    // display the result
+    updateMeters(probs);
+}
+
+function updateMeters(probs) {
+    // compute the new probabilities
     var team1Probs = [];
     var team2Probs = [];
+    probs.forEach(function(prob, i){
+        team1Probs[i] = prob/100;
+        team2Probs[i] = 1 - prob/100;
+    });
 
-    // read all values, including conflicting pct_n inputs
-    var games = $$('.game');
-    for (var i = 0; i < games.length; i++) {
-        var entry = games[i].querySelector('[name="team2_pct_n"]');
-        team1Probs[i] = 1 - entry.value/100;
-        team2Probs[i] = entry.value/100;
-    }
-
-    // if 'input' change was from a user, override any conflicting data
-    if (input) {
-        var game = parent(input, '.game');
-        var game_no = game.getAttribute('data-game-no')-1;
-        if (input.name == 'team1_pct_n') {
-            team1Probs[game_no] = input.value/100;
-            team2Probs[game_no] = 1 - input.value/100;
-        }
-        else if (input.name == 'team2_pct_n') {
-            team1Probs[game_no] = 1 - input.value/100;
-            team2Probs[game_no] = input.value/100;
-        }
-    }
-
-    // compute the new probabilities
+    // compute the new wins
     var team1WonYet = [];
     var team2WonYet = [];
     var noWinYet = [];
@@ -348,6 +353,7 @@ function updateMeters(input) {
     }
 
     // display the results
+    var games = $$('.game');
     for (var i = 0; i < 7; i++) {
         setValues(games[i], {
             team1_pct_n: Math.round(team1Probs[i]*100),
@@ -359,9 +365,30 @@ function updateMeters(input) {
     }
 }
 
+$('#config-panel').onsubmit = function(event) {
+    globals = getValues(event.target);
+    setValues($('#main'), globals);
+    $('#hide-config').click();
+    // return false;
+}
+
 /* -------- init -------- */
 
+function initGlobals() {
+    // initialize globals from either query or config-panel
+    var globals;
+    if (document.location.search) {
+        globals = parseQuery(document.location.search);
+        setValues($('#config-panel'), globals);
+    }
+    else {
+        globals = getValues($('#config-panel'));
+    }
+    return globals;
+}
+
+var globals = initGlobals();
 renderMain();
-updateMeters();
+setProb();
 
 </script>

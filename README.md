@@ -8,10 +8,12 @@ Calculate odds of seeing later games in a 7-game series
 
 - support numeric entry of each probability (as input or parameter) √
 
-- UI to reset probabilities to default
+- UI to reset probabilities to default √
+
+- persist probabilities in url query √
 
 - differentiate between setting globals and creating a bookmarkable link
 
 - make enclosing div for each game √
 
-- support syntax like <div data-name="team1_pct" data-target="style.width" />
+- support syntax like <div name="team1_pct" data-target="style.width" /> √
